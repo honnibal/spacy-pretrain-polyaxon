@@ -1,0 +1,58 @@
+---
+version: 1
+
+kind: group
+
+build:
+    image: ubuntu:bionic
+    build_steps:
+        - ./polyaxon_setup.sh
+
+environment:
+    resources:
+        cpu:
+            requests: 1.0
+            limits: 2
+        memory:
+            requests: 3000
+            limits: 7000
+        gpu: 
+            # Need to add GPU nodes to cluster -- can't currently launch them.
+            request: 0
+            limits: 0
+
+declarations:
+    width: 128
+    embed_size: 4
+    vectors_model: en_vectors_web_lg
+    train_iters: 30
+    train_examples: 1000
+
+hptuning:
+    concurrency: 200
+    random_search:
+        n_experiments: 200
+    matrix:
+        pretrain_iters:
+            values: [10]
+        use_vectors:
+            values: [1]
+        batch_size: 
+            values: [1, 2, 3, 4, 8, 32]
+        dropout:
+            values: [0.0, 0.1, 0.2]
+        pretrain_dropout:
+            values: [0.2, 0.5]
+        learn_rate:
+            values: [0.1, 0.005, 0.002, 0.001, 0.0001]
+        b1:
+            values: [0.0, 0.1, 0.5, 0.9]
+        b2_ratio:
+            values: [0.0, 1.0, 1.1, 1.11]
+        adam_eps:
+            values: [1e-4, 1e-8, 1e-12]
+        L2:
+            values: [0.0]
+ 
+run:
+    cmd: bash run.sh
