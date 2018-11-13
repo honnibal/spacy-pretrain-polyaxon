@@ -28,7 +28,7 @@ If you're running this multiple times, you might want to edit your settings into
 4. Install the bootstrap script (optional), and run it:
 
 ```
-sudo cp scripts/create_project.sh /usr/local/bin/create-polyaxon-project
+sudo cp scripts/create_project.sh /usr/local/bin/create-polyaxon-project # Optional, but convenient.
 mkdir -p ~/polyaxon-projects # Example -- could be anywhere
 cd ~/polyaxon-projects
 create-polyaxon-project my-new-project
