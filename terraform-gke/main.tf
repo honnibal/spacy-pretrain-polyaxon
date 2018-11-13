@@ -6,11 +6,16 @@ variable "zone" {
     type = "string"
 }
 
+variable "name" {
+    type = "string"
+    default = "polyaxon-cluster"
+}
+
+
 provider "google" {
   project     = "${var.project}"
   zone = "${var.zone}"
 }
-
 
 resource "google_container_node_pool" "control-nodes" {
     name       = "polyaxon-control-nodes"
@@ -25,7 +30,7 @@ resource "google_container_node_pool" "control-nodes" {
 
 
 resource "google_container_cluster" "cluster" {
-    name = "polyaxon-cluster"
+    name = "${var.name}"
 
     # Keep the default pool empty, and define node pools separately.
     lifecycle {
@@ -49,7 +54,7 @@ data "template_file" "install_polyaxon" {
 
 resource "null_resource" "trigger_script" {
     provisioner "local-exec" {
-        command = "echo \"${data.template_file.install_polyaxon.rendered}\" > /tmp/install-polyaxon.sh && bash /tmp/install-polyaxon.sh"
+        command = "./scripts/install-polyaxon ${var.project} ${var.zone} ${var.name}"
     }
 
     depends_on = ["google_container_cluster.cluster"]
