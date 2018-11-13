@@ -12,11 +12,9 @@ OSX, Linux and Windows Subsystem for Linux.
 * helm
 * terraform
 
-2. Launch a single-node file-server, named `polyaxon-nfs`:
-   https://console.cloud.google.com/launcher/details/click-to-deploy-images/singlefs
+2. Launch a single-node file-server, named `polyaxon-nfs`.
 
-This is the only bit of infrastructure that I haven't gotten into the Terraform
-file yet.
+Click (https://console.cloud.google.com/launcher/details/click-to-deploy-images/singlefs)[here] for instructions. This is the only bit of infrastructure that I haven't gotten into the Terraform file yet.
 
 3. Create your cluster, choosing a region and project name.
 
@@ -24,6 +22,10 @@ file yet.
 terraform init    
 terraform apply
 ```
+
+If you're running this multiple times, you might want to edit your settings into the `main.tf` file. The `main.tf` file contains Terraform declarations for the cluster and its node pools. We define one node pool for the control nodes, and another for CPU workers. You can also define further node pools, e.g. for GPU workers.
+
+After creating the cluster, Terraform will instantiate template files to install Polyaxon.
 
 4. Install the bootstrap script (optional), and run it:
 
