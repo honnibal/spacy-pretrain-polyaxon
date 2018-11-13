@@ -14,7 +14,7 @@ OSX, Linux and Windows Subsystem for Linux.
 
 2. Launch a single-node file-server, named `polyaxon-nfs`.
 
-Click (here)[https://console.cloud.google.com/launcher/details/click-to-deploy-images/singlefs] for instructions. This is the only bit of infrastructure that I haven't gotten into the Terraform file yet.
+Click [here](https://console.cloud.google.com/launcher/details/click-to-deploy-images/singlefs) for instructions. This is the only bit of infrastructure that I haven't gotten into the Terraform file yet.
 
 3. Create your cluster, choosing a region and project name.
 
