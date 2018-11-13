@@ -42,16 +42,6 @@ resource "google_container_cluster" "cluster" {
 }
 
 
-data "template_file" "install_polyaxon" {
-    template = "${file("${path.module}/scripts/install-polyaxon.sh.tmpl")}"
-    
-    vars {
-        project = "${var.project}"
-        zone = "${var.zone}"
-        name = "${google_container_cluster.cluster.name}"
-    }
-}
-
 resource "null_resource" "trigger_script" {
     provisioner "local-exec" {
         command = "./scripts/install-polyaxon ${var.project} ${var.zone} ${var.name}"
