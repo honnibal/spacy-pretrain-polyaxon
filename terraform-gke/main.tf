@@ -38,7 +38,7 @@ resource "google_container_cluster" "cluster" {
 
 
 data "template_file" "install_polyaxon" {
-    template = "${file("${path.module}/install-polyaxon.sh.tmpl")}"
+    template = "${file("${path.module}/scripts/install-polyaxon.sh.tmpl")}"
     
     vars {
         project = "${var.project}"
@@ -49,7 +49,8 @@ data "template_file" "install_polyaxon" {
 
 resource "null_resource" "trigger_script" {
     provisioner "local-exec" {
-        command = "echo \"${data.template_file.install_polyaxon.rendered}\" > script.sh && bash ./script.sh"
+        command = "echo \"${data.template_file.install_polyaxon.rendered}\" > /tmp/install-polyaxon.sh && bash /tmp/install-polyaxon.sh"
     }
+
     depends_on = ["google_container_cluster.cluster"]
 }
