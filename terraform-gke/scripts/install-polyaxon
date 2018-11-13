@@ -3,17 +3,19 @@
 set -e
 
 function setup_filer {
-    gcloud compute ssh --zone ${zone} --ssh-flag=-L3000:localhost:3000 polyaxon-nfs-vm --command=\"mkdir -m 777 -p /data/data /data/outputs /data/logs /data/repos\"
+    gcloud compute ssh --zone $zone --ssh-flag=-L3000:localhost:3000 polyaxon-nfs-vm --command="mkdir -m 777 -p /data/data /data/outputs /data/logs /data/repos"
 }
 
 
 function update_kubectl {
-    gcloud container clusters get-credentials --zone ${zone} ${name}
+    local readonly zone="$1"
+    local readonly name="$2"
+    gcloud container clusters get-credentials --zone $zone $name
 }
 
 
 function render_configs {
-    export filer_ip=`gcloud --project ${project} compute instances describe polyaxon-nfs-vm --zone=${zone} --format='value(networkInterfaces[0].networkIP)`
+    export filer_ip=`gcloud --project ${project} compute instances describe polyaxon-nfs-vm --zone=${zone} --format='value(networkInterfaces[0].networkIP)'`
     envsubst < configs/data-pvc.yml.tmpl > configs/data-pvc.yml
     envsubst < configs/outputs-pvc.yml.tmpl > configs/outputs-pvc.yml
     envsubst < configs/logs-pvc.yml.tmpl > configs/logs-pvc.yml
@@ -35,12 +37,12 @@ function install_polyaxon {
     helm install polyaxon/polyaxon --name=polyaxon --namespace=polyaxon -f configs/polyaxon-config.yml
 }
 
-function write_create_project {
-    # Write a create_project.sh file
-    
-}
 
-setup_filer
-update_kubectl
+project="$1"
+zone="$2"
+name="$3"
+
+setup_filer $zone
+update_kubectl $zone $name
 render_configs
 install_polyaxon
