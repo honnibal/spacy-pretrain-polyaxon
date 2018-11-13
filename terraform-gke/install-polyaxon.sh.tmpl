@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -e
+
+function setup_filer {
+    gcloud compute ssh --zone ${zone} --ssh-flag=-L3000:localhost:3000 polyaxon-nfs-vm --command=\"mkdir -m 777 -p /data/data /data/outputs /data/logs /data/repos\"
+}
+
+
+function update_kubectl {
+    gcloud container clusters get-credentials --zone ${zone} ${name}
+}
+
+
+function render_configs {
+    export filer_ip=`gcloud --project ${project} compute instances describe polyaxon-nfs-vm --zone=${zone} --format='value(networkInterfaces[0].networkIP)`
+    envsubst < configs/data-pvc.yml.tmpl > configs/data-pvc.yml
+    envsubst < configs/outputs-pvc.yml.tmpl > configs/outputs-pvc.yml
+    envsubst < configs/logs-pvc.yml.tmpl > configs/logs-pvc.yml
+    envsubst < configs/repos-pvc.yml.tmpl > configs/repos-pvc.yml
+}
+
+function install_polyaxon {
+    kubectl create namespace polyaxon
+    kubectl create -f configs/data-pvc.yml -n polyaxon
+    kubectl create -f configs/outputs-pvc.yml -n polyaxon
+    kubectl create -f configs/logs-pvc.yml -n polyaxon
+    kubectl create -f configs/repos-pvc.yml -n polyaxon
+    kubectl --namespace kube-system create sa tiller
+    kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+    helm init --service-account tiller
+
+    helm repo add polyaxon https://charts.polyaxon.com
+    helm repo update
+    helm install polyaxon/polyaxon --name=polyaxon --namespace=polyaxon -f configs/polyaxon-config.yml
+}
+
+setup_filer
+update_kubectl
+render_configs
+install_polyaxon
