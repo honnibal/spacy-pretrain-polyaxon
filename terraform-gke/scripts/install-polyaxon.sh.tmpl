@@ -35,6 +35,11 @@ function install_polyaxon {
     helm install polyaxon/polyaxon --name=polyaxon --namespace=polyaxon -f configs/polyaxon-config.yml
 }
 
+function write_create_project {
+    # Write a create_project.sh file
+    
+}
+
 setup_filer
 update_kubectl
 render_configs
