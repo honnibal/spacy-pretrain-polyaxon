@@ -23,3 +23,15 @@ file yet.
     terraform init    
     terraform apply
 
+4. Install the bootstrap script (optional), and run it:
+
+    sudo cp scripts/create_project.sh /usr/local/bin/create-polyaxon-project
+    mkdir -p ~/polyaxon-projects # Example -- could be anywhere
+    cd ~/polyaxon-projects
+    create-polyaxon-project my-new-project
+    cd my-new-project
+    source login.sh
+
+The login.sh script will activate a virtualenv in your project directory, and
+authenticate you with the Polyaxon cluster. You can run the
+`create-polyaxon-project` command to create new projects as you need them.
