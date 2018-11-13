@@ -35,7 +35,7 @@ The login.sh script will activate a virtualenv in your project directory, and au
 
 **5. Install the create-polyaxon-project script (optional)**
 
-You might want to install the `create-polyaxon-script` somewhere on your `PATH`, to make it easy to run in future.
+You might want to install the `create-polyaxon-project` somewhere on your `PATH`, to make it easy to run in future.
 
 ```
 sudo cp scripts/create_project.sh /usr/local/bin/create-polyaxon-project # Optional, but convenient.
