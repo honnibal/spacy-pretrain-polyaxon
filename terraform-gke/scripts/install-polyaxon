@@ -15,7 +15,9 @@ function update_kubectl {
 
 
 function render_configs {
+    export polyaxon_password="$1"
     export filer_ip=`gcloud --project ${project} compute instances describe polyaxon-nfs-vm --zone=${zone} --format='value(networkInterfaces[0].networkIP)'`
+    envsubst < configs/polyaxon-config.yml.tmpl > configs/polyaxon-config.yml
     envsubst < configs/data-pvc.yml.tmpl > configs/data-pvc.yml
     envsubst < configs/outputs-pvc.yml.tmpl > configs/outputs-pvc.yml
     envsubst < configs/logs-pvc.yml.tmpl > configs/logs-pvc.yml
@@ -41,8 +43,9 @@ function install_polyaxon {
 project="$1"
 zone="$2"
 name="$3"
+password="$4"
 
 setup_filer $zone
 update_kubectl $zone $name
-render_configs
+render_configs $password
 install_polyaxon
