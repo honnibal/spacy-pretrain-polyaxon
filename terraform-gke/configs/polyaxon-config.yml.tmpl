@@ -1,0 +1,42 @@
+user:
+    username: "root"
+    email: "root@polyaxon.local"
+    password: "${polyaxon_password}"
+
+postgresql:
+    persistence:
+        enabled: true
+        size: 5Gi
+rbac:
+  enabled: true
+
+ingress:
+  enabled: true
+
+serviceType: ClusterIP
+
+nodeSelectors:
+    core:
+        polyaxon: core
+    experiments:
+        polyaxon: experiments
+    builds:
+        polyaxon: builds
+
+persistence:
+  logs:
+      logs1:
+        existingClaim: polyaxon-pvc-logs
+        mountPath: /logs
+  repos:
+      repos1:
+        existingClaim: polyaxon-pvc-repos
+        mountPath: repos
+  data:
+    data1:
+      existingClaim: polyaxon-pvc-data
+      mountPath: /data
+  outputs:
+    outputs1:
+      existingClaim: polyaxon-pvc-outputs
+      mountPath: /outputs
