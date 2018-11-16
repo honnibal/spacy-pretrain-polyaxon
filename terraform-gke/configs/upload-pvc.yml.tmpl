@@ -8,7 +8,7 @@ spec:
   accessModes:
     - ReadWriteMany
   nfs:
-    server: {{ filer_ip }}
+    server: $filer_ip
     path: "/data/upload"
   claimRef:
     namespace: polyaxon
