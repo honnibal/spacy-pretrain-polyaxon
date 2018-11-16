@@ -20,16 +20,39 @@ provider "google" {
   zone = "${var.zone}"
 }
 
-resource "google_container_node_pool" "control-nodes" {
-    name       = "polyaxon-control-nodes"
+resource "google_container_node_pool" "core-nodes" {
+    name       = "core"
     cluster    = "${google_container_cluster.cluster.name}"
     node_count = 3
     node_config {
         preemptible  = true
-        machine_type = "n1-standard-1"
+        machine_type = "n1-standard-4"
         oauth_scopes = ["compute-rw", "storage-ro", "logging-write", "monitoring"]
     }
 }
+
+resource "google_container_node_pool" "experiment-nodes" {
+    name       = "experiments"
+    cluster    = "${google_container_cluster.cluster.name}"
+    node_count = 3
+    node_config {
+        preemptible  = true
+        machine_type = "n1-standard-2"
+        oauth_scopes = ["compute-rw", "storage-ro", "logging-write", "monitoring"]
+    }
+}
+
+resource "google_container_node_pool" "build-nodes" {
+    name       = "builds"
+    cluster    = "${google_container_cluster.cluster.name}"
+    node_count = 1
+    node_config {
+        preemptible  = true
+        machine_type = "n1-standard-2"
+        oauth_scopes = ["compute-rw", "storage-ro", "logging-write", "monitoring"]
+    }
+}
+
 
 
 resource "google_container_cluster" "cluster" {
