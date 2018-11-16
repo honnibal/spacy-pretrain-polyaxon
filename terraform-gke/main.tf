@@ -44,11 +44,15 @@ resource "google_container_cluster" "cluster" {
     }
 }
 
-
 resource "null_resource" "trigger_script" {
     provisioner "local-exec" {
-        command = "./scripts/install-polyaxon ${var.project} ${var.zone} ${var.name}"
+        command = "./scripts/install-polyaxon ${var.project} ${var.zone} ${var.name} \"${random_string.polyaxon_password.result}\""
     }
 
-    depends_on = ["google_container_cluster.cluster"]
+    depends_on = [
+        "google_container_cluster.cluster",
+        "google_container_node_pool.core-nodes",
+        "google_container_node_pool.build-nodes",
+        "google_container_node_pool.experiment-nodes",
+    ]
 }
