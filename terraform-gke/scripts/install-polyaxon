@@ -3,7 +3,7 @@
 set -e
 
 function setup_filer {
-    gcloud compute ssh --zone $zone --ssh-flag=-L3000:localhost:3000 polyaxon-nfs-vm --command="mkdir -m 777 -p /data/data /data/outputs /data/logs /data/repos"
+    gcloud compute ssh --zone $zone --ssh-flag=-L3000:localhost:3000 polyaxon-nfs-vm --command="mkdir -m 777 -p /data/upload /data/data /data/outputs /data/logs /data/repos"
 }
 
 
@@ -20,14 +20,17 @@ function render_configs {
     envsubst < configs/polyaxon-config.yml.tmpl > configs/polyaxon-config.yml
     envsubst < configs/data-pvc.yml.tmpl > configs/data-pvc.yml
     envsubst < configs/outputs-pvc.yml.tmpl > configs/outputs-pvc.yml
+    envsubst < configs/upload-pvc.yml.tmpl > configs/upload-pvc.yml
     envsubst < configs/logs-pvc.yml.tmpl > configs/logs-pvc.yml
     envsubst < configs/repos-pvc.yml.tmpl > configs/repos-pvc.yml
 }
 
 function install_polyaxon {
+    set +e
     kubectl create namespace polyaxon
     kubectl create -f configs/data-pvc.yml -n polyaxon
     kubectl create -f configs/outputs-pvc.yml -n polyaxon
+    kubectl create -f configs/upload-pvc.yml -n polyaxon
     kubectl create -f configs/logs-pvc.yml -n polyaxon
     kubectl create -f configs/repos-pvc.yml -n polyaxon
     kubectl --namespace kube-system create sa tiller
@@ -36,6 +39,7 @@ function install_polyaxon {
 
     helm repo add polyaxon https://charts.polyaxon.com
     helm repo update
+    set -e
     helm install polyaxon/polyaxon --name=polyaxon --namespace=polyaxon -f configs/polyaxon-config.yml
 }
 
