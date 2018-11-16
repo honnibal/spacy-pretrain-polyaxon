@@ -11,6 +11,9 @@ variable "name" {
     default = "polyaxon-cluster"
 }
 
+resource "random_string" "polyaxon_password" {
+    length = "16"
+}
 
 provider "google" {
   project     = "${var.project}"
