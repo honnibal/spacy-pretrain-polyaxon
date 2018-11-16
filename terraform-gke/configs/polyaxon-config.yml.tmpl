@@ -25,13 +25,13 @@ nodeSelectors:
 
 persistence:
   logs:
-      logs1:
-        existingClaim: polyaxon-pvc-logs
-        mountPath: /logs
+    logs1:
+      existingClaim: polyaxon-pvc-logs
+      mountPath: /logs
   repos:
-      repos1:
-        existingClaim: polyaxon-pvc-repos
-        mountPath: repos
+    repos1:
+      existingClaim: polyaxon-pvc-repos
+      mountPath: /repos
   data:
     data1:
       existingClaim: polyaxon-pvc-data
