@@ -23,6 +23,13 @@ terraform apply
 
 If you're running this multiple times, you might want to edit your settings into the `main.tf` file. The `main.tf` file contains Terraform declarations for the cluster and its node pools. We define one node pool for the control nodes, and another for CPU workers. You can also define further node pools, e.g. for GPU workers. After creating the cluster, Terraform will fill some configuration values into the templates, execute a script to install Polyaxon.
 
+To delete the cluster, run:
+
+```bash
+
+terraform destroy
+```
+
 **4. Create a new project**
 
 ```
