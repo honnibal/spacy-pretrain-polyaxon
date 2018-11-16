@@ -28,6 +28,9 @@ resource "google_container_node_pool" "core-nodes" {
         preemptible  = true
         machine_type = "n1-standard-4"
         oauth_scopes = ["compute-rw", "storage-ro", "logging-write", "monitoring"]
+        labels {
+            polyaxon = "core"
+        }
     }
 }
 
@@ -39,6 +42,10 @@ resource "google_container_node_pool" "experiment-nodes" {
         preemptible  = true
         machine_type = "n1-standard-2"
         oauth_scopes = ["compute-rw", "storage-ro", "logging-write", "monitoring"]
+        labels {
+            polyaxon = "experiments"
+        }
+
     }
 }
 
@@ -50,6 +57,9 @@ resource "google_container_node_pool" "build-nodes" {
         preemptible  = true
         machine_type = "n1-standard-2"
         oauth_scopes = ["compute-rw", "storage-ro", "logging-write", "monitoring"]
+        labels {
+            polyaxon = "builds"
+        }
     }
 }
 
@@ -57,6 +67,11 @@ resource "google_container_node_pool" "build-nodes" {
 
 resource "google_container_cluster" "cluster" {
     name = "${var.name}"
+
+    master_auth {
+        username = "admin"
+        password = "${random_string.polyaxon_password.result}"
+    }
 
     # Keep the default pool empty, and define node pools separately.
     lifecycle {
