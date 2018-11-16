@@ -17,21 +17,18 @@ serviceType: ClusterIP
 
 nodeSelectors:
     core:
-        polyaxon: core
+      polyaxon: core
     experiments:
-        polyaxon: experiments
+      polyaxon: experiments
     builds:
-        polyaxon: builds
+      polyaxon: builds
 
 persistence:
   logs:
-    logs1:
       existingClaim: polyaxon-pvc-logs
-      mountPath: /logs
   repos:
-    repos1:
       existingClaim: polyaxon-pvc-repos
-      mountPath: /repos
+
   data:
     data1:
       existingClaim: polyaxon-pvc-data
@@ -40,3 +37,7 @@ persistence:
     outputs1:
       existingClaim: polyaxon-pvc-outputs
       mountPath: /outputs
+  upload:
+    upload1:
+      existingClaim: polyaxon-pvc-upload
+      mountPath: /upload
