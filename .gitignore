@@ -1,0 +1,5 @@
+*.swp
+.env/
+tmp/
+.polyaxon/
+.terraform/
