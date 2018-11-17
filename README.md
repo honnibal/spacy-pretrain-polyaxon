@@ -153,10 +153,7 @@ trained on the 1000 labelled training examples.
 
 ## Results
 
-We ran 100 configurations of the experiment, using randomly selected
-hyper-parameters. To compare the effect of some setting on accuracy, we can
-look at the top-3 accuracies produced for each value of that setting.
-
+### Experiment 1
 
 The main question we want to answer is how the pre-training iterations effect
 the model's text classification accuracy. We investigate pre-training for 0, 1,
@@ -167,20 +164,32 @@ configuration:
 
 | LMAO?    | Accuracy |
 | -------- | -------- |
-| Baseline |          | 
-| 1 epoch  |          | 
-| 2 epoch  |          | 
-| 3 epoch  |          | 
+| Baseline | 86.8     | 
+| 1 epoch  | 87.5     | 
+| 2 epoch  | 86.5     | 
+| 3 epoch  | 86.5     | 
 
-The pre-training produces a nice (albeit not earth-shattering) improvement in
-accuracy over the baseline. Most of the benefit comes from the first epoch of
-pre-training, with subsequent epochs producing little improvement. This likely
-indicates that the LMAO objective isn't difficult enough currently, and results
-could be improved with further tweaking. 
+This is basically a negative result. We see a small improvement in accuracy
+after 1 epoch, but nothing substantial. The accuracy of the LMAO-1-epoch
+configuration is up around what I saw in my preliminary experiments, but the
+baseline then was around 85%, where now the baseline is coming in at 86.8. Go
+figure. The only real difference is that in my preliminary experiment,
+I accidentally ran everything against the test set, which obviously isn't
+suitable for all this hyper-parameter search. So, maybe just luck of the draw
+on the random search?
 
-Full results will be made available as a CSV.  Notably, the full results show
-that the same ordering applies if you look at more results --- it's not simply an
-outcome of which configuration gets "lucky" at the random search.
+Eyeballing an ordering of the experiments, the LMAO-1-epoch runs definitely
+cluster near the top. So, it does help. A bit.
+
+The real problem here is that the accuracy goes down as more epochs are
+trained. To me this indicates the supervision task is too easy: the model can learn
+exploits that let it satisfy the loss, without learning more useful vectors.
+
+I think a likely problem is the use of the same vectors on the input as we have
+in the output. I think the model can learn to rely on those vectors, and
+steadily ignore the context information. To fix this, we can either remove the
+vectors from the input, and not have the pre-trained vectors, or we can use
+different vectors.
 
 
 ## Future work
