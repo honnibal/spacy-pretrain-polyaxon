@@ -166,7 +166,7 @@ time (producing runs in total). We report the best accuracy found for each
 configuration:
 
 | LMAO?    | Acc 1 |
---------------------
+| -------- | ----- |
 | Baseline |       | 
 | 1 epoch  |       | 
 | 2 epoch  |       | 
