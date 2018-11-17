@@ -22,19 +22,22 @@ environment:
             limits: 0
 
 declarations:
-    width: 128
-    embed_size: 1000
     vectors_model: en_vectors_web_lg
-    train_iters: 30
-    train_examples: 1000
-
 hptuning:
-    concurrency: 200
+    concurrency: 100
     random_search:
-        n_experiments: 200
+        n_experiments: 100
     matrix:
+        width:
+            values: [128]
+        embed_size:
+            values: [1000]
+        train_iters:
+            values: [30]
+        train_examples:
+            values: [1000]
         pretrain_iters:
-            values: [0, 1, 2, 3, 4, 10]
+            values: [0, 1, 2, 3, 4]
         use_vectors:
             values: [0, 1]
         batch_size: 
@@ -44,7 +47,7 @@ hptuning:
         pretrain_dropout:
             values: [0.0, 0.2, 0.5]
         learn_rate:
-            values: [0.2, 0.15, 0.1, 0.005, 0.002, 0.001, 0.0001]
+            values: [1.0, 0.5, 0.3, 0.25, 0.2, 0.15, 0.1, 0.005, 0.002, 0.001, 0.0001]
         b1:
             values: [0.0, 0.1, 0.5, 0.9]
         b2_ratio:
@@ -55,4 +58,4 @@ hptuning:
             values: [0.0]
  
 run:
-    cmd: bash run.sh
+    cmd: env3.6/bin/python pretrain_textcat.py
