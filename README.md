@@ -153,7 +153,7 @@ trained on the 1000 labelled training examples.
 
 ## Results
 
-### Experiment 1
+### Experiment 1: IMDB-1k, GloVe vectors
 
 The main question we want to answer is how the pre-training iterations effect
 the model's text classification accuracy. We investigate pre-training for 0, 1,
@@ -190,6 +190,57 @@ in the output. I think the model can learn to rely on those vectors, and
 steadily ignore the context information. To fix this, we can either remove the
 vectors from the input, and not have the pre-trained vectors, or we can use
 different vectors.
+
+### Experiment 2: OntoNotes NER, FastText vectors
+
+After experiment 1, it'd be good to get a different perspective on how this
+works. One thing we want to try is pre-training with much more text. We also
+want to pre-train one of the other components.
+
+We first perform a quick test, using only one hyper-parameter configuration ---
+the current default's for spaCy's NER. I piped text from the January 2017
+partition of the Reddit Comments Corpus through the `spacy pretrain` command,
+and saved out the CNN weights every 1 million words. The CNN weights are only
+4mb with the width (128) and embedding rows (1000) being investigated, so it's
+no problem to try lots of check points.
+
+I set the batch size for pre-training to 128 comments, resulting in a training
+speed of 70k words per second on a Tesla v100 GPU -- about a 7-fold speed-up
+over the CPU execution speed. Because the model is so narrow, the pre-training
+only utilises about 15% of the card, leaving plenty of capacity to also run the
+NER experiments on the same device. 
+
+For this experiment, I used the FastText common-crawl vectors with subword
+features as the objective, instead of the GloVe common crawl model used in
+experiment 1. While the `spacy pretrain` command dumped out the vector
+checkpoints, I periodically started NER models training, using CNN models
+pre-trained on increasing amounts of data.
+
+Here's how F-measure on the development data looked for each epoch of training,
+for the different models I trained.
+
+| Epoch | Baseline | 50**7 | 10**8`| 
+| ----- | -------- | ----- | ----- | 
+| 1     | 78.7     | 80.7  | 80.8  |
+| 2     | 81.7     | 82.6  | 82.9  |
+| 3     | 82.9     | 83.7  | 83.9  |
+| 4     | 83.7     | 84.4  | 84.5  |
+| 5     | 83.9     | 84.5  | 84.8  |
+| 6     | 84.2     | 85.0  | 85.2  |
+| 7     | 84.5     | 85.1  | 85.2  |
+| 8     | 84.8     | 85.1  | 85.3  |
+| 9     | 84.9     | 85.1  | 85.5  |
+| 10    | 85.0     | 85.2  | 85.6  |
+| 11    | 85.0     | 85.3  | 85.7  |
+| 12    | 85.2     | 85.3  | 85.5  |
+| 13    | 85.2     | 85.4  | 85.6  |
+| 14    |          | 85.4  | 85.5  |
+| 15    |          | 85.5  | 85.8  |
+| 16    |          | 85.4  | 85.8  |
+| 17    |          | 85.6  | 85.7  |
+
+Some of the models weren't being run under screen, and I lost connection to
+the server --- so I need to rerun this, especially the baseline.
 
 
 ## Future work
