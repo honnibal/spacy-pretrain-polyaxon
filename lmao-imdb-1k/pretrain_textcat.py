@@ -25,6 +25,24 @@ import polyaxon_helper
 from polyaxon_helper import send_metrics
 
 
+class EarlyStopping(object):
+    def __init__(self, metric, patience):
+        self.metric = metric
+        self.max_patience = patience
+        self.current_patience = patience
+        # We set a minimum best, so that we lose patience with terrible configs.
+        self.best = 0.5
+
+    def update(self, result):
+        if result[self.metric] >= self.best:
+            self.best = result[self.metric]
+            self.current_patience = self.max_patience
+            return False
+        else:
+            self.current_patience -= 1
+            return self.current_patience <= 0
+
+
 def report_progress(epoch, best, losses, scores):
     print('{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}'  # print a simple table
         .format(losses['textcat'], scores['textcat_p'],
@@ -90,12 +108,14 @@ def build_textcat_model(tok2vec, nr_class, width):
     model.tok2vec = tok2vec
     return model
 
+
 def block_gradients(model):
     from thinc.api import wrap
     def forward(X, drop=0.):
         Y, _ = model.begin_update(X, drop=drop)
         return Y, None
     return wrap(forward, model)
+
 
 def create_pipeline(width, embed_size, vectors_model, use_vectors):
     print("Load vectors")
@@ -111,6 +131,7 @@ def create_pipeline(width, embed_size, vectors_model, use_vectors):
         model=build_textcat_model(tok2vec, 2, width))
     nlp.add_pipe(textcat)
     return nlp
+
 
 def train_tensorizer(nlp, texts, dropout, n_iter):
     tensorizer = nlp.create_pipe('tensorizer')
@@ -138,6 +159,7 @@ def train_textcat(nlp, n_texts, opt_params, n_iter=10, dropout=0.2, batch_size=2
     # get names of other pipes to disable them during training
     other_pipes = [pipe for pipe in nlp.pipe_names if pipe != 'textcat']
     best_acc = 0.0
+    early_stopping = EarlyStopping('acc', 5)
     with nlp.disable_pipes(*other_pipes):  # only train textcat
         # Params arent passed in properly in spaCy :(. Work around the bug.
         optimizer = nlp.begin_training()
@@ -158,6 +180,9 @@ def train_textcat(nlp, n_texts, opt_params, n_iter=10, dropout=0.2, batch_size=2
                 scores = evaluate_textcat(nlp.tokenizer, textcat, dev_texts, dev_cats)
             best_acc = max(best_acc, scores['acc'])
             report_progress(i, best_acc, losses, scores)
+            should_stop = early_stopping.update(scores)
+            if should_stop:
+                break
 
 def evaluate_textcat(tokenizer, textcat, texts, cats):
     docs = (tokenizer(text) for text in texts)
