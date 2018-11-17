@@ -161,16 +161,16 @@ look at the top-3 accuracies produced for each value of that setting.
 The main question we want to answer is how the pre-training iterations effect
 the model's text classification accuracy. We investigate pre-training for 0, 1,
 2 or 3 epochs. We performed a separate hyper-parameter search for each
-configuration, performing 100 runs with randomly sampled hyper-parameters each
-time (producing runs in total). We report the best accuracy found for each
+configuration, performing 50 runs with randomly sampled hyper-parameters each
+time (producing 200 runs in total). We report the best accuracy found for each
 configuration:
 
-| LMAO?    | Acc 1 |
-| -------- | ----- |
-| Baseline |       | 
-| 1 epoch  |       | 
-| 2 epoch  |       | 
-| 3 epoch  |       | 
+| LMAO?    | Accuracy |
+| -------- | -------- |
+| Baseline |          | 
+| 1 epoch  |          | 
+| 2 epoch  |          | 
+| 3 epoch  |          | 
 
 The pre-training produces a nice (albeit not earth-shattering) improvement in
 accuracy over the baseline. Most of the benefit comes from the first epoch of
