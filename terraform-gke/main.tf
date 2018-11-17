@@ -23,9 +23,9 @@ provider "google" {
 resource "google_container_node_pool" "core-nodes" {
     name       = "core"
     cluster    = "${google_container_cluster.cluster.name}"
-    node_count = 3
+    node_count = 4
     node_config {
-        preemptible  = true
+        preemptible  = false
         machine_type = "n1-standard-4"
         oauth_scopes = ["compute-rw", "storage-ro", "logging-write", "monitoring"]
         labels {
@@ -38,9 +38,14 @@ resource "google_container_node_pool" "experiment-nodes" {
     name       = "experiments"
     cluster    = "${google_container_cluster.cluster.name}"
     node_count = 3
+    autoscaling {
+        min_node_count = 3
+        max_node_count = 80
+    }
+
     node_config {
         preemptible  = true
-        machine_type = "n1-standard-2"
+        machine_type = "n1-standard-4"
         oauth_scopes = ["compute-rw", "storage-ro", "logging-write", "monitoring"]
         labels {
             polyaxon = "experiments"
@@ -62,7 +67,6 @@ resource "google_container_node_pool" "build-nodes" {
         }
     }
 }
-
 
 
 resource "google_container_cluster" "cluster" {
