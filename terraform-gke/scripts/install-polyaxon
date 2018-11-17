@@ -35,7 +35,9 @@ function install_polyaxon {
     kubectl create -f configs/repos-pvc.yml -n polyaxon
     kubectl --namespace kube-system create sa tiller
     kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+    sleep 15
     helm init --service-account tiller
+    sleep 10
 
     helm repo add polyaxon https://charts.polyaxon.com
     helm repo update
