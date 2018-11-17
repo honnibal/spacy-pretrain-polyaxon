@@ -70,16 +70,19 @@ def load_texts(limit=0):
         return list(train_texts) + list(dev_texts)
 
 
-def load_textcat_data(limit=0):
+def load_textcat_data(is_final_result=False, limit=0):
     """Load data from the IMDB dataset."""
-    # Partition off part of the train data for evaluation
     train_data, eval_data = thinc.extra.datasets.imdb()
     random.shuffle(train_data)
-    train_data = train_data[-limit:]
-    texts, labels = zip(*train_data)
+    if not is_final_result:
+        # Partition off part of the train data for evaluation
+        eval_data = train_data[-5000:]
+        train_data = train_data[:-5000]
+    train_texts, train_labels = zip(*train_data)
     eval_texts, eval_labels = zip(*eval_data)
     cats = [{'POSITIVE': bool(y), 'NEGATIVE': not bool(y)} for y in labels]
     eval_cats = [{'POSITIVE': bool(y), 'NEGATIVE': not bool(y)} for y in eval_labels]
+    train_data = train_data[-limit:]
     return (texts, cats), (eval_texts, eval_cats)
 
 
