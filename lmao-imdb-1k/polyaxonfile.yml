@@ -24,9 +24,9 @@ environment:
 declarations:
     vectors_model: en_vectors_web_lg
 hptuning:
-    concurrency: 100
+    concurrency: 50
     random_search:
-        n_experiments: 100
+        n_experiments: 50
     matrix:
         width:
             values: [128]
@@ -37,17 +37,17 @@ hptuning:
         train_examples:
             values: [1000]
         pretrain_iters:
-            values: [0, 1, 2, 3, 4]
+            values: [3]
         use_vectors:
-            values: [0, 1]
+            values: [1]
         batch_size: 
-            values: [1, 2, 3, 4, 8, 32]
+            values: [1, 2, 4, 8, 32]
         dropout:
             values: [0.0, 0.1, 0.2]
         pretrain_dropout:
             values: [0.0, 0.2, 0.5]
         learn_rate:
-            values: [1.0, 0.5, 0.3, 0.25, 0.2, 0.15, 0.1, 0.005, 0.002, 0.001, 0.0001]
+            values: [0.5, 0.2, 0.15, 0.1, 0.005, 0.002, 0.001, 0.0001]
         b1:
             values: [0.0, 0.1, 0.5, 0.9]
         b2_ratio:
