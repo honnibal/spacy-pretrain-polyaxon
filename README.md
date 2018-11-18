@@ -217,31 +217,124 @@ checkpoints, I periodically started NER models training, using CNN models
 pre-trained on increasing amounts of data.
 
 Here's how F-measure on the development data looked for each epoch of training,
-for the different models I trained.
+for the different models I trained. The number is the amount of data the
+pre-training ran over (in a single pass --- the text is effectively infinite,
+so why train on the same text twice?). The T indicates a trigram objective,
+i.e. the output is a trigram of vectors. I started trying this because
+I thought the unigram objective might be too easy.
 
-| Epoch | Baseline | 50**7 | 10**8`| 
-| ----- | -------- | ----- | ----- | 
-| 1     | 78.7     | 80.7  | 80.8  |
-| 2     | 81.7     | 82.6  | 82.9  |
-| 3     | 82.9     | 83.7  | 83.9  |
-| 4     | 83.7     | 84.4  | 84.5  |
-| 5     | 83.9     | 84.5  | 84.8  |
-| 6     | 84.2     | 85.0  | 85.2  |
-| 7     | 84.5     | 85.1  | 85.2  |
-| 8     | 84.8     | 85.1  | 85.3  |
-| 9     | 84.9     | 85.1  | 85.5  |
-| 10    | 85.0     | 85.2  | 85.6  |
-| 11    | 85.0     | 85.3  | 85.7  |
-| 12    | 85.2     | 85.3  | 85.5  |
-| 13    | 85.2     | 85.4  | 85.6  |
-| 14    |          | 85.4  | 85.5  |
-| 15    |          | 85.5  | 85.8  |
-| 16    |          | 85.4  | 85.8  |
-| 17    |          | 85.6  | 85.7  |
+| Epoch | Baseline | 50**7 | 10**8`| T 10**7 | T 50**7  | T 10**8 |
+| ----- | -------- | ----- | ----- | ------- | -------- | ------- |
+| 1     | 78.3     | 80.7  | 80.8  | 80.4    | 80.4     | 80.2    |
+| 2     | 81.4     | 82.6  | 82.9  | 82.5    | 82.7     | 82.7
+| 3     | 82.6     | 83.7  | 83.9  | 83.5    | 83.9     | 83.7
+| 4     | 83.5     | 84.4  | 84.5  | 84.1    | 84.5     | 84.3
+| 5     | 83.7     | 84.5  | 84.8  | 84.3    | 84.6     | 84.8
+| 6     | 83.9     | 85.0  | 85.2  | 84.3    | 84.9     | 85.0
+| 7     | 84.2     | 85.1  | 85.2  | 84.6    | 85.1     | 85.0
+| 8     | 84.4     | 85.1  | 85.3  | 84.7    | 85.1     | 85.
+| 9     | 84.7     | 85.1  | 85.5  | 84.7    | 85.2     | 85. 
+| 10    | 84.7     | 85.2  | 85.6  | (stop)  | 85.4     | 85.
+| 11    | 84.7     | 85.3  | 85.7  |         | 85.3     | 85.
+| 12    | 84.9     | 85.3  | 85.5  |         | 85.3     | 85.
+| 13    | 85.0     | 85.4  | 85.6  |         | 85.5     | 
+| 14    | 85.1     | 85.4  | 85.5  |         | 85.6     | 
+| 15    | 85.2     | 85.5  | 85.8  |         | 85.5     |
+| 16    | 85.2     | 85.4  | 85.8  |         | 85.5     |
+| 17    |          | 85.6  | 85.7  |         | 85.5     |
+| Best  | 85.5     | 85.6  | 85.8  |         | 85.7     | 85.7  
 
-Some of the models weren't being run under screen, and I lost connection to
-the server --- so I need to rerun this, especially the baseline.
+So this hasn't really worked. There's an improvement towards the start of
+training, but eventually the baseline overcomes its worse initialization, and
+converges to the same sort of score.
 
+The following explanations seem most likely to me (in order).
+
+1. The dataset is big enough to train a model of this size. If the dataset is
+   big enough for the model, pre-training doesn't help.
+2. The objective isn't good enough. Semi-supervised learning really needs to be
+   *prediction*, not mere compression. This result from the auto-encoding
+   literature is apparently very well supported, although the logic of it is
+   a mystery to me, and I don't have the citations at hand.
+3. Everything's fine, we just need more of the same. More training, tweaked
+   hyper-parameters, maybe a small trick here or there, etc.
+4. Pre-training the CNN doesn't work, for some reason. BiLSTM and the
+   transformer have important differences, especially about long-range
+   dependencies.
+
+
+I think 1 is probably the most conventional logic of pre-training. Certainly
+the authors of the BERT paper make a comment like this, saying "Everything
+we've observed suggests bigger models are better". This is kind of a bummer
+though! Even though this is likely to be true, I want to investigate carefully
+to make sure of it --- because if it isn't, we can have both efficiency and
+accuracy.
+
+The next experiments are therefore to change the objective. One idea I've had
+for a long time is to use the parser for this purpose. Instead of the word's
+head or a trigram of the word and its surrounding context, we can predict the
+vector of the word's syntactic head (using the parser's prediction). I've tried
+making a bigram of the word's head and the word itself. It seems good that the
+word should keep the knowledge of what itself is, although maybe that's
+unnecessary.
+
+While I didn't bother to log the results, the trigram and parser objectives
+didn't significantly change the story. The accuracy from the first iterations
+was about the same as the other techniques, or even worse. It doesn't make
+sense to me that the pre-training could make the accuracy *worse* at first, and
+later better. The more epochs we do, the further we go away from the
+initialisation. If the initialisation is worse at first, it could only be luck
+that carries us to a better result. So, I would say an early lead should be
+necessary but not sufficient for success here.
+
+I then left it to pretrain with the original (single token) objective,
+a wider model (300 dimensions, up from 128), and more embedding rows (5000).
+If the problem is that the objective is too easy, making the model larger
+and leaving it to pretrain for longer shouldn't work. If the problem is that
+the model is too small and it's already "saturated" by the training data, the
+results should be better here. Of course a null result is hard to interpret:
+there's no limit to the number of ways an idea can fail to work, and multiple
+problems can occur at once.
+
+Task: NER
+Objective: Focus word's FastText vector
+Width: 300
+Number of embedding rows: 5000
+
+| Epoch | Baseline | 10**8 | 20**9 | P 10**7 |
+| ----- | -------- | ----- | ----- | ------- |
+| 0 | 80.6 | 82.8 | 82.7 |
+| 1 | 82.9 | 84.4 | 84.1 |
+| 2 | 83.7 | 84.9 | 84.7 |
+| 3 | 84.4 | 85.3 | 85.0 | 
+| 4 | 84.6 | 85.4 | 85.0 | 
+| 5 | 84.9 | 85.5 | 85.5 | 
+| 6 | 85.1 | 85.7 | 85.6 |
+| 7 | 85.2 | 85.6 | 85.7 | 
+| 8 | 85.1 | 85.8 | 85.8 | 
+| 9 | 85.3 | 85.8 | 85.8 | 
+| 10 | 85.4 | 85.7 | 85.7 |
+| 11 | 85.4 | 85.6 | 85.7 | 
+| 12 | 85.3 | 85.5 | 85.7 | 
+| 13 | 85.3 | 85.6 | 85.8 | 
+| 14 | 85.2 | 85.6 | 85.6 | 
+| 15 | 85.2 | 85.5 | 85.7 | 
+
+The results here are pretty much as before, so not much has changed simply from
+making the model larger. The baseline gets slightly worse, while the accuracy
+of the pre-trained models stays solid at 85.8. The differences are pretty
+small. Using weights pre-training on 10**8 words of text does just as well as
+weights pre-trained on 20**9 words. Again, it's hard to interpret negative
+results, but these are at least consistent with the idea that the pre-training
+objective is too easy.
+
+I'll try the parser-based objective again, but modify it so that it's only
+predicting the word's head, rather than a concatenation of the word's vector
+and it's head. Maybe that's too difficult, or otherwise confusing for the
+model.
+
+Results with width 128, embed rows 1000. 10**7: 80.047, 82.4, 83.5 (stopped).
+20**7: 80.07, 82.3 (stop), 38**7: 79.9 (stopped).
 
 ## Future work
 
