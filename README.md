@@ -336,6 +336,53 @@ model.
 Results with width 128, embed rows 1000. 10**7: 80.047, 82.4, 83.5 (stopped).
 20**7: 80.07, 82.3 (stop), 38**7: 79.9 (stopped).
 
+Okay, so what if it's explanation 3: fiddly details? The first thing to try is
+to prevent the forgetting that's likely to occur. After all, we shouldn't
+expect initialization to matter so much --- we're asking the optimizer to
+be insensitive to that. We can try Howard and Ruder's unfreezing, but the easy
+to implement first thing is to just dampen the learning rate on the CNN. It's
+also worth trying to disable the dropout, so that the model learns in fewer
+epochs. This seems more promising. With width 300, embed rows 5000, 10**8:
+83.8, 85.0, 85.3, 85.8, 85.6. Maybe removing the dropout is bad. 82.7, 83.9,
+84.6, 85.2, 85.3, 85.5, 85.8, 85.7, 85.6. So, no real effect from damping the
+learning rate. I tried a few different things, half, a tenth, freezing for the
+first epoch, etc. Staying frozen for too long harmed final accuracy, everything
+else didn't matter.
+
+## LSTM?
+
+What if we tried with an LSTM, so we can use a predict-next-word objective?
+
+Trying with width=128, depth=2, embed_rows=1000, FastText vectors. Immediately
+I'm having trouble getting the LSTM to converge. After 50m words the loss-per-batch
+isn't really decreasing. I'll try removing the dropout to help it a little. Nope.
+Okay, I'll try fitting a small dataset, say 1k comments (about 300k words). Yep,
+learns.  100k comments (30m words)?  On the fourth epoch now, and the loss does
+seem to be going down. I guess the streaming case is very difficult, so it
+might not be problematic if the loss is very slow to decrease. It would be
+interesting if this were the problem, though. I would've thought generalisation
+would be better from N steps on entirely novel data, instead of using multiple
+iterations over the same data?
+
+Currently the LM initialization is causing much worse performance. On the first
+epoch, we get to 75 F without, 70 with. Maybe it's not being loaded correctly.
+I'll focus on getting the pretraining to fit first.
+
+It seems to help to add a non-linear layer between the LSTM and the output.
+Widening to 300 also makes the model fit a lot better. I've added a length cap
+to the inputs of 200 tokens, so that the model can be widened without memory
+limitations.
+
+Okay, so there was indeed a problem with saving and loading the LSTM weights!
+Having fixed this, the pre-training indeed seems to be helping. With width 128
+and 2 layers, we get 75 F without pre-training in the first epoch, and having
+pre-trained for 60m words, we get 76.9. I also did a quick check when little
+training data was available (1k texts), and the pre-training was helping there
+as well.
+
+Now time to write up the bidirectional model, as the forward one is getting
+a bit worse results than the CNN, and trying only forward is a bit artificial.
+
 ## Future work
 
 ### Multi-task learning instead of transfer learning?
