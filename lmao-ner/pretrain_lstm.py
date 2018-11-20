@@ -25,9 +25,10 @@ from thinc.i2v import HashEmbed
 from thinc.misc import LayerNorm as LN
 from thinc.api import add, layerize, chain, clone, concatenate, with_flatten
 from thinc.api import FeatureExtracter, with_getitem, flatten_add_lengths
-from thinc.api import with_square_sequences, wrap
+from thinc.api import with_square_sequences, wrap, noop
 
 from spacy.attrs import ID, ORTH, LOWER, NORM, PREFIX, SUFFIX, SHAPE
+from spacy._ml import Tok2Vec_LSTM
 
 try:
     import torch.nn
@@ -108,104 +109,36 @@ def get_lm_vectors_loss(ops, docs, prediction):
     return loss, d_scores
 
 
-def create_pretraining_model(nlp, components, objective="basic"):
+def create_pretraining_model(nlp, tok2vec, objective="basic"):
     """Define a network for the pretraining."""
-    embed, f_lstm, b_lstm = components
     output_size = nlp.vocab.vectors.data.shape[1]
-    width = embed.nO
-    print(embed, f_lstm, b_lstm)
     # This is annoying, but the parser etc have the flatten step after
     # the tok2vec. To load the weights in cleanly, we need to match
     # the shape of the models' components exactly. So what we cann
     # "tok2vec" has to be the same set of processes as what the components do.
     with Model.define_operators({">>": chain, "|": concatenate}):
-        tok2vec = (
-            embed
-            >> (f_lstm | b_lstm)
-            >> flatten
-            >> LN(Maxout(width, width * 2, pieces=3))
-        )
 
         l2r_model = (
-            f_lstm
+            tok2vec.l2r
             >> flatten
-            >> LN(Maxout(output_size, f_lstm.nO, pieces=3))
+            >> LN(Maxout(output_size, tok2vec.l2r.nO, pieces=3))
             >> zero_init(Affine(output_size, drop_factor=0.0))
         )
         r2l_model = (
-            b_lstm
+            tok2vec.r2l
             >> flatten
-            >> LN(Maxout(output_size, b_lstm.nO, pieces=3))
+            >> LN(Maxout(output_size, tok2vec.r2l.nO, pieces=3))
             >> zero_init(Affine(output_size, drop_factor=0.0))
         )
 
-        model = embed >> (l2r_model | r2l_model)
+        model = tok2vec.embed >> (l2r_model | r2l_model)
 
-    model.l2r = l2r_model
-    model.r2l = r2l_model
     model.tok2vec = tok2vec
     model.begin_training([nlp.make_doc("Give it a doc to infer shapes")])
+    tok2vec.begin_training([nlp.make_doc("Give it a doc to infer shapes")])
+    tokvecs = tok2vec([nlp.make_doc('hello there'), nlp.make_doc(u'and hello')])
+    print(tokvecs.shape)
     return model
-
-
-def PyTorchLSTM(nO, nI, depth, dropout=0.2):
-    if depth == 0:
-        return layerize(noop())
-    model = torch.nn.LSTM(nI, nO, depth, dropout=dropout)
-    return with_square_sequences(PyTorchWrapperRNN(model))
-
-
-def with_reversed(model):
-    """Reverse input into a model, and unreverse the output.
-    Used for BiLSTM.
-    """
-
-    def reverse_forward(Xs, drop=0.0):
-        X_flipped = [model.ops.xp.flip(X, axis=0) for X in Xs]
-        Y_flipped, get_dX_flipped = model.begin_update(X_flipped, drop=drop)
-        Ys = [model.ops.xp.flip(Y, axis=0) for Y in Y_flipped]
-
-        def reverse_backward(dYs, sgd=None):
-            dYs_flipped = [model.ops.xp.flip(dY, axis=0) for dY in dYs]
-            dX_flipped = get_dX_flipped(dYs_flipped, sgd=sgd)
-            dXs = [model.ops.xp.flip(dX, axis=0) for dX in dX_flipped]
-            return dXs
-
-        return Ys, reverse_backward
-
-    return wrap(reverse_forward, model)
-
-
-def Tok2Vec_LSTM(width, embed_size, depth, dropout):
-    cols = [ID, NORM, PREFIX, SUFFIX, SHAPE, ORTH]
-    with Model.define_operators({">>": chain, "|": concatenate, "**": clone, "+": add}):
-        norm = HashEmbed(width, embed_size, column=cols.index(NORM), name="embed_norm")
-        prefix = HashEmbed(
-            width, embed_size // 2, column=cols.index(PREFIX), name="embed_prefix"
-        )
-        suffix = HashEmbed(
-            width, embed_size // 2, column=cols.index(SUFFIX), name="embed_suffix"
-        )
-        shape = HashEmbed(
-            width, embed_size // 2, column=cols.index(SHAPE), name="embed_shape"
-        )
-        embed = (
-            FeatureExtracter([ORTH, LOWER, PREFIX, SUFFIX, SHAPE, ID])
-            >> with_flatten(
-                (norm | prefix | suffix | shape)
-                >> LN(Maxout(width, width * 4, pieces=3))
-            )
-        )
-        forward_model = PyTorchLSTM(width, width, depth, dropout=dropout)
-        backward_model = with_reversed(
-            PyTorchLSTM(width, width, depth, dropout=dropout)
-        )
-
-        # Work around thinc API limitations :(. TODO: Revise in Thinc 7
-        forward_model.nO = width
-        backward_model.nO = width
-        embed.nO = width
-    return embed, forward_model, backward_model
 
 
 def make_docs(nlp, batch, heads=True):
@@ -307,9 +240,9 @@ def pretrain(
         file_.write(json.dumps(config))
     has_gpu = prefer_gpu()
     nlp = spacy.load(vectors_model)
-    model = create_pretraining_model(
-        nlp, Tok2Vec_LSTM(width, embed_rows, depth, dropout)
-    )
+    tok2vec = Tok2Vec_LSTM(width, embed_rows, depth, dropout)
+    print(dir(tok2vec))
+    model = create_pretraining_model(nlp, tok2vec)
     optimizer = create_default_optimizer(model.ops)
     tracker = ProgressTracker()
     print("Epoch", "#Words", "Loss", "L/W", "w/s")
@@ -324,7 +257,8 @@ def pretrain(
                 if texts_loc == "-" and tracker.words_per_epoch[epoch] >= 10 ** 6:
                     break
         with (output_dir / ("model%d.bin" % epoch)).open("wb") as file_:
-            file_.write(model.tok2vec.to_bytes())
+            # This is annoying -- work around how Parser expects this
+            file_.write(chain(tok2vec, layerize(noop())).to_bytes())
         with (output_dir / "log.jsonl").open("a") as file_:
             file_.write(
                 json.dumps(
