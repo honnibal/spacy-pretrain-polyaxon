@@ -22,30 +22,22 @@ environment:
             limits: 0
 
 declarations:
-    vectors_model: en_vectors_web_lg
+    width: 96
+    embed_size: 2000
+    init_tok2vec: "./RC_2017-01_lmao_glove_cnn_cw96_er2000_cd4_d05.bin"
 hptuning:
-    concurrency: 50
+    concurrency: 100
     random_search:
-        n_experiments: 50
+        n_experiments: 100
     matrix:
-        width:
-            values: [128]
-        embed_size:
-            values: [1000]
         train_iters:
             values: [30]
         train_examples:
             values: [1000]
-        pretrain_iters:
-            values: [3]
-        use_vectors:
-            values: [1]
         batch_size: 
-            values: [1, 2, 4, 8, 32]
+            values: [1, 2, 4, 8, 32, 48, 64]
         dropout:
             values: [0.0, 0.1, 0.2]
-        pretrain_dropout:
-            values: [0.0, 0.2, 0.5]
         learn_rate:
             values: [0.5, 0.2, 0.15, 0.1, 0.005, 0.002, 0.001, 0.0001]
         b1:
