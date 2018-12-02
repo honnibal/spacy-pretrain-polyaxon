@@ -95,12 +95,17 @@ def build_textcat_model(tok2vec, nr_class, width):
     return model
 
 
-def create_pipeline(lang, width, embed_size):
-    nlp = spacy.blank(lang)
+def create_pipeline(lang, width, embed_size, vectors):
+    if vectors:
+        nlp = spacy.blank(lang)
+    else:
+        print("Load vectors", vectors)
+        nlp = spacy.load(vectors)
     print("Start training")
     tok2vec = Tok2Vec(
         width=width,
         embed_size=embed_size,
+        pretrained_vectors=vectors
     )
     textcat = TextCategorizer(
         nlp.vocab,
@@ -210,6 +215,7 @@ def configure_optimizer(opt, params):
 MAIN_ARGS = {
     "width": ("Width of CNN layers", "positional", None, int),
     "embed_size": ("Embedding rows", "positional", None, int),
+    "vectors": ("Pre-trained vectors", "option", "v", str),
     "init_tok2vec": ("Path to pre-trained weights", "option", "t2v", str),
     "train_iters": ("Number of iterations to pretrain", "option", "tn", int),
     "train_examples": ("Number of labelled examples", "option", "eg", int),
@@ -227,15 +233,16 @@ MAIN_ARGS = {
 def main(
     width: int,
     embed_size: int,
+    vectors: str,
     init_tok2vec=None,
     train_iters=30,
     train_examples=1000,
-    batch_size=2,
-    dropout=0.2,
-    learn_rate=0.001,
-    b1=0.9,
-    b2_ratio=1.11,
-    adam_eps=1e-12,
+    batch_size=4,
+    dropout=0.0,
+    learn_rate=0.15,
+    b1=0.0,
+    b2_ratio=0.0,
+    adam_eps=0.0,
     L2=0.0,
     grad_norm_clip=1.0,
 ):
@@ -244,7 +251,7 @@ def main(
     use_gpu = prefer_gpu()
     print("Using GPU?", use_gpu)
 
-    nlp = create_pipeline('en', width, embed_size)
+    nlp = create_pipeline('en', width, embed_size, vectors)
     train_textcat(
         nlp,
         train_examples,
