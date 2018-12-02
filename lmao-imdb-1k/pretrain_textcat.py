@@ -130,7 +130,7 @@ def train_textcat(nlp, n_texts, opt_params, init_tok2vec=None, n_iter=10, dropou
         optimizer = nlp.begin_training()
         configure_optimizer(optimizer, opt_params)
         if init_tok2vec is not None:
-            with init_tok2vec.open('rb') as file_:
+            with Path(init_tok2vec).open('rb') as file_:
                 textcat.model.tok2vec.from_bytes(file_.read())
         print("Training the model...")
         print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
@@ -210,7 +210,7 @@ def configure_optimizer(opt, params):
 MAIN_ARGS = {
     "width": ("Width of CNN layers", "positional", None, int),
     "embed_size": ("Embedding rows", "positional", None, int),
-    "init_tok2vec": ("Path to pre-trained weights", "option", "t2v", Path),
+    "init_tok2vec": ("Path to pre-trained weights", "option", "t2v", str),
     "train_iters": ("Number of iterations to pretrain", "option", "tn", int),
     "train_examples": ("Number of labelled examples", "option", "eg", int),
     "batch_size": ("Batch_size for TC", "option", "bs", int),
