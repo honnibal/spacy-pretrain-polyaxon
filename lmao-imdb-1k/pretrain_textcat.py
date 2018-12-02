@@ -16,13 +16,14 @@ the development labels, after all --- only the unlabelled text.
 import plac
 import random
 import spacy
+import tqdm
 import thinc.extra.datasets
-from spacy.util import minibatch
-from spacy._ml import Tok2Vec
+from thinc.neural.util import prefer_gpu
+from spacy.util import minibatch, fix_random_seed
+from spacy._ml import Tok2Vec, flatten
 from spacy.pipeline import TextCategorizer
 import numpy
-import polyaxon_helper
-from polyaxon_helper import send_metrics
+from pathlib import Path
 
 
 class EarlyStopping(object):
@@ -62,20 +63,6 @@ def report_progress(epoch, best, losses, scores):
     )
 
 
-def load_texts(limit=0):
-    train, dev = thinc.extra.datasets.imdb()
-    train_texts, train_labels = zip(*train)
-    dev_texts, dev_labels = zip(*train)
-    train_texts = list(train_texts)
-    dev_texts = list(dev_texts)
-    random.shuffle(train_texts)
-    random.shuffle(dev_texts)
-    if limit >= 1:
-        return train_texts[:limit]
-    else:
-        return list(train_texts) + list(dev_texts)
-
-
 def load_textcat_data(is_final_result=False, limit=0):
     """Load data from the IMDB dataset."""
     train_data, eval_data = thinc.extra.datasets.imdb()
@@ -92,17 +79,6 @@ def load_textcat_data(is_final_result=False, limit=0):
     return (train_texts, train_cats), (eval_texts, eval_cats)
 
 
-def prefer_gpu():
-    used = spacy.util.use_gpu(0)
-    if used is None:
-        return False
-    else:
-        import cupy.random
-
-        cupy.random.seed(0)
-        return True
-
-
 def build_textcat_model(tok2vec, nr_class, width):
     from thinc.v2v import Model, Softmax
     from thinc.api import flatten_add_lengths, chain
@@ -115,32 +91,17 @@ def build_textcat_model(tok2vec, nr_class, width):
             >> Pooling(mean_pool)
             >> Softmax(nr_class, width)
         )
-    model.tok2vec = tok2vec
+    model.tok2vec = chain(tok2vec, flatten)
     return model
 
 
-def block_gradients(model):
-    from thinc.api import wrap
-
-    def forward(X, drop=0.0):
-        Y, _ = model.begin_update(X, drop=drop)
-        return Y, None
-
-    return wrap(forward, model)
-
-
-def create_pipeline(width, embed_size, vectors_model, use_vectors):
-    print("Load vectors")
-    nlp = spacy.load(vectors_model)
+def create_pipeline(lang, width, embed_size):
+    nlp = spacy.blank(lang)
     print("Start training")
-    if use_vectors:
-        tok2vec = Tok2Vec(
-            width=width,
-            embed_size=embed_size,
-            pretrained_vectors=nlp.vocab.vectors.name,
-        )
-    else:
-        tok2vec = Tok2Vec(width=width, embed_size=embed_size)
+    tok2vec = Tok2Vec(
+        width=width,
+        embed_size=embed_size,
+    )
     textcat = TextCategorizer(
         nlp.vocab,
         labels=["POSITIVE", "NEGATIVE"],
@@ -150,23 +111,8 @@ def create_pipeline(width, embed_size, vectors_model, use_vectors):
     return nlp
 
 
-def train_tensorizer(nlp, texts, dropout, n_iter):
-    tensorizer = nlp.create_pipe("tensorizer")
-    nlp.add_pipe(tensorizer)
-    optimizer = nlp.begin_training()
-    for i in range(n_iter):
-        losses = {}
-        for i, batch in enumerate(minibatch(texts)):
-            docs = [nlp.make_doc(text) for text in batch]
-            tensorizer.update(docs, None, losses=losses, sgd=optimizer, drop=dropout)
-        send_metrics(pretrain_loss=losses["tensorizer"])
-        print(losses)
-    return optimizer
-
-
-def train_textcat(nlp, n_texts, opt_params, n_iter=10, dropout=0.2, batch_size=2):
+def train_textcat(nlp, n_texts, opt_params, init_tok2vec=None, n_iter=10, dropout=0.2, batch_size=2):
     textcat = nlp.get_pipe("textcat")
-    tok2vec_weights = textcat.model.tok2vec.to_bytes()
     (train_texts, train_cats), (dev_texts, dev_cats) = load_textcat_data(limit=n_texts)
     print(
         "Using {} examples ({} training, {} evaluation)".format(
@@ -183,11 +129,16 @@ def train_textcat(nlp, n_texts, opt_params, n_iter=10, dropout=0.2, batch_size=2
         # Params arent passed in properly in spaCy :(. Work around the bug.
         optimizer = nlp.begin_training()
         configure_optimizer(optimizer, opt_params)
-        textcat.model.tok2vec.from_bytes(tok2vec_weights)
+        if init_tok2vec is not None:
+            with init_tok2vec.open('rb') as file_:
+                textcat.model.tok2vec.from_bytes(file_.read())
         print("Training the model...")
         print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
         for i in range(n_iter):
             losses = {"textcat": 0.0}
+            if USE_TQDM:
+                # If we're using the CLI, a progress bar is nice.
+                train_data = tqdm.tqdm(train_data, leave=False)
             # batch up the examples using spaCy's minibatch
             batches = minibatch(train_data, size=batch_size)
             for batch in batches:
@@ -207,9 +158,9 @@ def train_textcat(nlp, n_texts, opt_params, n_iter=10, dropout=0.2, batch_size=2
 
 def evaluate_textcat(tokenizer, textcat, texts, cats):
     docs = (tokenizer(text) for text in texts)
-    tp = 1e-8
+    tp = 0
     fp = 1e-8
-    tn = 1e-8
+    tn = 0
     fn = 1e-8
     for i, doc in enumerate(textcat.pipe(docs)):
         gold = cats[i]
@@ -226,7 +177,7 @@ def evaluate_textcat(tokenizer, textcat, texts, cats):
                 fn += 1
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
-    f_score = 2 * (precision * recall) / (precision + recall)
+    f_score = 2 * (precision * recall) / (precision + recall + 1e-8)
     return {
         "textcat_p": precision,
         "textcat_r": recall,
@@ -259,14 +210,11 @@ def configure_optimizer(opt, params):
 MAIN_ARGS = {
     "width": ("Width of CNN layers", "positional", None, int),
     "embed_size": ("Embedding rows", "positional", None, int),
-    "pretrain_iters": ("Number of iterations to pretrain", "option", "pn", int),
+    "init_tok2vec": ("Path to pre-trained weights", "option", "t2v", Path),
     "train_iters": ("Number of iterations to pretrain", "option", "tn", int),
     "train_examples": ("Number of labelled examples", "option", "eg", int),
     "batch_size": ("Batch_size for TC", "option", "bs", int),
     "dropout": ("Dropout for TC", "option", "do", float),
-    "pretrain_dropout": ("Dropout for pretrain", "option", "pd", float),
-    "vectors_model": ("Name or path to vectors model to learn from"),
-    "use_vectors": ("Whether to use the vectors in the input", "option", "UV", int),
     "learn_rate": ("Learning rate for TC", "option", "lr", float),
     "b1": ("First momentum term for Adam", "option", "b1", float),
     "b2_ratio": ("Ratio between b1 and b2 for Adam", "option", "b2r", float),
@@ -279,35 +227,24 @@ MAIN_ARGS = {
 def main(
     width: int,
     embed_size: int,
-    vectors_model,
-    pretrain_iters=30,
+    init_tok2vec=None,
     train_iters=30,
     train_examples=1000,
-    use_vectors=0,
     batch_size=2,
     dropout=0.2,
-    pretrain_dropout=0.2,
     learn_rate=0.001,
     b1=0.9,
-    b2_ratio=100,
+    b2_ratio=1.11,
     adam_eps=1e-12,
     L2=0.0,
     grad_norm_clip=1.0,
 ):
     opt_params = get_opt_params(locals())
-    random.seed(0)
-    numpy.random.seed(0)
+    fix_random_seed(0)
     use_gpu = prefer_gpu()
     print("Using GPU?", use_gpu)
 
-    nlp = create_pipeline(width, embed_size, vectors_model, use_vectors)
-    print("Load data")
-    texts = load_texts(limit=0)
-    print("Train tensorizer")
-    optimizer = train_tensorizer(
-        nlp, texts, dropout=pretrain_dropout, n_iter=pretrain_iters
-    )
-    print("Train textcat")
+    nlp = create_pipeline('en', width, embed_size)
     train_textcat(
         nlp,
         train_examples,
@@ -315,13 +252,19 @@ def main(
         dropout=dropout,
         batch_size=batch_size,
         n_iter=train_iters,
+        init_tok2vec=init_tok2vec
     )
 
 
 if __name__ == "__main__":
-    if 1:
+    try:
+        import polyaxon_helper
+        from polyaxon_helper import send_metrics
+        USE_TQDM = 0
         args = polyaxon_helper.get_declarations()
         print(args)
         main(**args)
-    else:
+    except ImportError:
+        USE_TQDM = True
+        send_metrics = lambda *args, **kwargs: None
         plac.call(plac.annotations(**MAIN_ARGS)(main))
