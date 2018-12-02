@@ -32,6 +32,4 @@ EOF
 
 source login.sh
 
-polyaxon project create --name $project_name
-sleep 4
-polyaxon init $project_name
+polyaxon project create --name $project_name --init
