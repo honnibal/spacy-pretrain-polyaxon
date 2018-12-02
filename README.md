@@ -24,7 +24,7 @@ comments corpus). The pre-trained CNN is very small: it's depth 4, width 96,
 and has only 2000 rows in the hash embeddings table. Weights for the serialized
 model are only 3.2 MB.
 
-Here's how pretraining affects parser accuracy on different sized subsets of
+Here's how pretraining affects parser unlabelled accuracy on different sized subsets of
 the training data.
 
 | #Docs | #Words | Baseline | Pretrain |
