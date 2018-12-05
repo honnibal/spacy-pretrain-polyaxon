@@ -14,6 +14,43 @@ Instead of outputting numeric IDs, we predict points in a vector space that's
 been pre-trained using an algorithm like GloVe or FastText. This lets the model
 learn large target vocabularies, without requiring extra parameters.
 
+## Update 05-12-18: Good results Universal Dependencies English
+
+I compared accuracy on the development data of the English-EWT portion of the
+universal dependencies data for four models:
+
+1. No GloVe, no LMAO: Only the training data was used, with no pre-training in
+  the word vectors or the CNN. This is the `sm` configuration in spaCy.
+2. GloVe: Pre-trained word vectors were used as one of the input features. This
+  is the `lg` configuration in spaCy.
+3. No GloVe, LMAO: Like 1, but the CNN and hash embeddings were pretrained with LMAO cloze task.
+4. GloVe, LMAO:  Like 2, but the CNN and hash embeddings were pretrained with the LMAO cloze task. 
+
+| Model        | LAS  | 
+| ------------ | ---- | 
+| -GloVe,-LMAO | 79.1 |
+| -GloVe,+LMAO | 81.0 |
+| +GloVe,-LMAO | 81.0 |
+| +GloVe,+LMAO | 82.4 |
+| Stanford '17 | 82.3 |
+| Stanford '18 | 83.9 |
+
+All the models had the same number of learnable parameters: token vector width
+96, hidden width 64, 2000 embedding rows. The model is very small --- like,
+3 MB if total. The pre-training was done on the January 2017 portion of the
+Reddit comments corpus (about 2 billion words). The pre-training objective is
+like the BERT cloze task, but instead of predicting word IDs, we predict the
+pre-trained GloVe vector of the word. This means the output layer is very small
+(only 300 dimensions). A non-linear layer is used in between the CNN and the
+output layer. This non-linear layer is a layer-normalized Maxout layer.
+
+The two Stanford models are shown for comparison, to show these are overall
+quite solid scores given the size of the model. We're achieving comparable
+accuracy to the Stanford system that won the CoNLL 2017 shared task. The
+Stanford 2018 results were near state-of-the-art in August 2018, but don't
+utilise BERT-style pre-training, which I guess would push their results
+into the high 80s.
+
 ## Update 02-12-18: Good results for small models, low data
 
 The `spacy pretrain` command now uses a BERT-style masked language model, but
