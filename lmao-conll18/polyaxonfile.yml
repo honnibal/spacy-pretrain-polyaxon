@@ -1,0 +1,54 @@
+---
+version: 1
+
+kind: group
+
+build:
+  image: ubuntu:bionic
+  build_steps:
+    - ./polyaxon_setup.sh
+
+environment:
+    resources:
+        cpu:
+            requests: 1.0
+            limits: 2
+        memory:
+            requests: 3000
+            limits: 7000
+        gpu: 
+            request: 0
+            limits: 0
+
+declarations:
+    ud_dir: "ud-treebanks-v2.3"
+    parses_dir: "parses"
+    corpus: "UD_English-EWT"
+    pretrained_tok2vec: "tok2vec-weights/en/RC_2017-01_lmao_glove_cnn3_cw96_er2000_cd4_d05.bin"
+    multitask_sent: 0
+    multitask_dep: 0
+    multitask_tag: 0
+    nr_epoch: 30
+    dropout: 0.2
+
+hptuning:
+    concurrency: 100
+    random_search:
+        n_experiments: 100
+
+    matrix:
+        learn_rate:
+            linspace: 0.0005:0.002:100
+        adam_b1:
+            values: [0.3, 0.5, 0.8]
+        adam_b2_factor:
+            values: [0.9, 1.0, 1.1]
+        adam_b1_decay:
+            values: [1e-3, 1e-6, 0.0]
+        adam_b2_decay:
+            values: [1e-3, 1e-6, 0.0]
+        adam_eps:
+            values: [1e-2, 1e-3, 1e-5, 1e-8, 1e-12]
+
+run:
+    cmd: env3.6/bin/python ud_train.py
