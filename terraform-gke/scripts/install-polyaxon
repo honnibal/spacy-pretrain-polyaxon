@@ -3,7 +3,7 @@
 set -e
 
 function setup_filer {
-    gcloud compute ssh --zone $zone --ssh-flag=-L3000:localhost:3000 polyaxon-nfs-vm --command="mkdir -m 777 -p /data/upload /data/data /data/outputs /data/logs /data/repos"
+    gcloud compute ssh --zone $zone --ssh-flag=-L3000:localhost:3000 polyaxon-nfs-vm --command="sudo mkdir -m 777 -p /data/upload /data/data /data/outputs /data/logs /data/repos"
 }
 
 
