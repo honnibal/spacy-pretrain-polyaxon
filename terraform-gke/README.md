@@ -12,9 +12,9 @@ OSX, Linux and Windows Subsystem for Linux.
 * helm
 * terraform
 
-**2. Launch a [single-node file-server](https://console.cloud.google.com/launcher/details/click-to-deploy-images/singlefs), named `polyaxon-nfs`.**
+**2. Generate an SSL certificate
 
-**3. Create your cluster, choosing a region and project name.**
+**3. Create your cluster, choosing a region, hostname and project name.**
 
 ```bash
 terraform init    
