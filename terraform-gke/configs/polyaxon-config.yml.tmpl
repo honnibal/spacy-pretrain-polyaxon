@@ -12,23 +12,18 @@ rbac:
 
 ingress:
   enabled: true
+  hostName: polyaxon.galaxy.farm
 
-serviceType: ClusterIP
+serviceType: NodePort
 
-nodeSelectors:
-    core:
-      polyaxon: core
-    experiments:
-      polyaxon: experiments
-    builds:
-      polyaxon: builds
+nodeSelector:
+  polyaxon: core
 
 persistence:
   logs:
       existingClaim: polyaxon-pvc-logs
   repos:
       existingClaim: polyaxon-pvc-repos
-
   data:
     data1:
       existingClaim: polyaxon-pvc-data
@@ -37,7 +32,3 @@ persistence:
     outputs1:
       existingClaim: polyaxon-pvc-outputs
       mountPath: /outputs
-  upload:
-    upload1:
-      existingClaim: polyaxon-pvc-upload
-      mountPath: /upload
