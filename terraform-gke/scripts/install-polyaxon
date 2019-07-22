@@ -15,26 +15,29 @@ function update_kubectl {
 
 
 function render_configs {
-    export polyaxon_password="$1"
-    export filer_ip=`gcloud --project ${project} compute instances describe polyaxon-nfs-vm --zone=${zone} --format='value(networkInterfaces[0].networkIP)'`
+    export hostname="$1"
+    export polyaxon_password="$2"
+    #export filer_ip=`gcloud --project ${project} compute instances describe polyaxon-nfs-vm --zone=${zone} --format='value(networkInterfaces[0].networkIP)'`
     envsubst < configs/polyaxon-config.yml.tmpl > configs/polyaxon-config.yml
-    envsubst < configs/data-pvc.yml.tmpl > configs/data-pvc.yml
-    envsubst < configs/outputs-pvc.yml.tmpl > configs/outputs-pvc.yml
+    #envsubst < configs/data-pvc.yml.tmpl > configs/data-pvc.yml
+    #envsubst < configs/outputs-pvc.yml.tmpl > configs/outputs-pvc.yml
     #envsubst < configs/upload-pvc.yml.tmpl > configs/upload-pvc.yml
-    envsubst < configs/logs-pvc.yml.tmpl > configs/logs-pvc.yml
-    envsubst < configs/repos-pvc.yml.tmpl > configs/repos-pvc.yml
+    #envsubst < configs/logs-pvc.yml.tmpl > configs/logs-pvc.yml
+    #envsubst < configs/repos-pvc.yml.tmpl > configs/repos-pvc.yml
 }
 
 function install_polyaxon {
     set +e
+    local readonly tls_dir="$1"
     kubectl create namespace polyaxon
-    kubectl create -f configs/data-pvc.yml -n polyaxon
-    kubectl create -f configs/outputs-pvc.yml -n polyaxon
+    #kubectl create -f configs/data-pvc.yml -n polyaxon
+    #kubectl create -f configs/outputs-pvc.yml -n polyaxon
     #kubectl create -f configs/upload-pvc.yml -n polyaxon
-    kubectl create -f configs/logs-pvc.yml -n polyaxon
-    kubectl create -f configs/repos-pvc.yml -n polyaxon
+    #kubectl create -f configs/logs-pvc.yml -n polyaxon
+    #kubectl create -f configs/repos-pvc.yml -n polyaxon
     kubectl --namespace kube-system create sa tiller
     kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+    kubectl create secret tls polyaxon-tls --namespace polyaxon --key "$tls_dir/privkey.pem" --cert "$tls_dir/fullchain.pem"
     sleep 15
     helm init --service-account tiller
     sleep 10
@@ -42,6 +45,8 @@ function install_polyaxon {
     helm repo add polyaxon https://charts.polyaxon.com
     helm repo update
     set -e
+    # Need a better way to check readiness :(
+    sleep 120
     helm install -n polyaxon --name=nginx stable/nginx-ingress
     helm install polyaxon/polyaxon --name=polyaxon --namespace=polyaxon -f configs/polyaxon-config.yml
 }
@@ -50,9 +55,11 @@ function install_polyaxon {
 project="$1"
 zone="$2"
 name="$3"
-password="$4"
+hostname="$4"
+tls_base="$5"
+password="$6"
 
-setup_filer $zone
+#setup_filer $zone
 update_kubectl $zone $name
-render_configs $password
-install_polyaxon
+render_configs $hostname $password
+install_polyaxon "$tls_base/$hostname"

@@ -88,7 +88,7 @@ resource "google_container_cluster" "cluster" {
 
 resource "null_resource" "trigger_script" {
     provisioner "local-exec" {
-        command = "./scripts/install-polyaxon ${var.project} ${var.zone} ${var.name} \"${random_string.polyaxon_password.result}\""
+        command = "./scripts/install-polyaxon ${var.project} ${var.zone} ${var.name} ${var.hostname} $${var.tls_dir} \"${random_string.polyaxon_password.result}\""
     }
 
     depends_on = [
