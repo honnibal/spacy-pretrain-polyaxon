@@ -4,9 +4,28 @@ user:
     password: "${polyaxon_password}"
 
 postgresql:
-    persistence:
-        enabled: true
-        size: 5Gi
+  persistence:
+    enabled: true
+    size: 5Gi
+  nodeSelector:
+    polyaxon: core
+
+redis:
+  master:
+    nodeSelector:
+      polyaxon: core
+  slave:
+    nodeSelector:
+      polyaxon: core
+
+rabbitmq-ha:
+  nodeSelector:
+    polyaxon: core
+
+docker-registry:
+  nodeSelector:
+    polyaxon: core
+
 rbac:
   enabled: true
 
