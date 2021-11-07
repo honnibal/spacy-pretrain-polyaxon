@@ -26,8 +26,8 @@ export POLYAXON_WS_PORT=80
 
 echo http://\$POLYAXON_IP:\$POLYAXON_HTTP_PORT
 
-polyaxon config set --host=\$POLYAXON_IP --http=\$POLYAXON_HTTP_PORT 
-polyaxon config set --host=\$POLYAXON_IP --http=\$POLYAXON_HTTP_PORT 
+polyaxon config set --host=\$POLYAXON_IP --port=\$POLYAXON_HTTP_PORT 
+polyaxon config set --host=\$POLYAXON_IP --port=\$POLYAXON_HTTP_PORT 
 polyaxon login --username=root --password="\$(kubectl get secret --namespace polyaxon polyaxon-polyaxon-secret -o jsonpath="{.data.POLYAXON_ADMIN_PASSWORD}" | base64 --decode)"
 
 EOF
